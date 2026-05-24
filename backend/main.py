@@ -32,14 +32,22 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  MongoDB init error: {exc}")
 
     try:
-        from backend.services.rag_pipeline import load_vector_store
-        load_vector_store()
+        # Vector store can be large (FAISS). Allow skipping on memory-constrained hosts
+        if os.getenv("SKIP_VECTOR_STORE", "false").lower() != "true":
+            from backend.services.rag_pipeline import load_vector_store
+            load_vector_store()
+        else:
+            print("Skipping vector store load (SKIP_VECTOR_STORE=true)")
     except Exception as exc:
         print(f"Vector store not loaded: {exc}")
 
     try:
-        from backend.services.lora_manager import save_training_data
-        save_training_data()
+        # LoRA training data export is for development; skip in lightweight deployments
+        if os.getenv("SKIP_LORA_EXPORT", "false").lower() != "true":
+            from backend.services.lora_manager import save_training_data
+            save_training_data()
+        else:
+            print("Skipping LoRA training data export (SKIP_LORA_EXPORT=true)")
     except Exception as exc:
         print(f"LoRA data not exported: {exc}")
 
