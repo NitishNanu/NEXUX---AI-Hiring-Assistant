@@ -4,13 +4,33 @@ import os
 import pickle
 from typing import Optional
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-
 from backend.config import settings
 
+
+def _get_text_splitter() -> "RecursiveCharacterTextSplitter":
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+    return RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+        separators=["\n\n", "\n", ". ", " ", ""],
+    )
+
+
+def _get_faiss_class():
+    try:
+        from langchain_community.vectorstores import FAISS
+    except ImportError as exc:
+        raise ImportError(
+            "FAISS support is not installed. Install `langchain-community` and `faiss-cpu` "
+            "to enable vector store features."
+        ) from exc
+
+    return FAISS
+
 # ── Globals ──────────────────────────────────────────────────────────
-_vector_store: Optional[FAISS] = None
+_vector_store: Optional[object] = None
 _embeddings = None
 
 HR_SYSTEM_PROMPT = """You are an AI Senior HR Recruiter, Career Coach, and Resume Expert.
@@ -101,22 +121,18 @@ def _get_llm():
         )
 
 
-def get_text_splitter() -> RecursiveCharacterTextSplitter:
-    return RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len,
-        separators=["\n\n", "\n", ". ", " ", ""],
-    )
+def get_text_splitter() -> object:
+    return _get_text_splitter()
 
 
-def load_vector_store() -> Optional[FAISS]:
+def load_vector_store() -> Optional[object]:
     """Load existing FAISS index from disk."""
     global _vector_store
     index_path = settings.faiss_index_path
 
     if os.path.exists(index_path):
         try:
+            FAISS = _get_faiss_class()
             embeddings = _get_embeddings()
             _vector_store = FAISS.load_local(
                 index_path, embeddings, allow_dangerous_deserialization=True
@@ -158,6 +174,7 @@ def ingest_texts(texts: list[str], metadatas: list[dict] | None = None):
 
     embeddings = _get_embeddings()
 
+    FAISS = _get_faiss_class()
     if _vector_store is None:
         _vector_store = FAISS.from_texts(all_chunks, embeddings, metadatas=all_metas)
     else:
