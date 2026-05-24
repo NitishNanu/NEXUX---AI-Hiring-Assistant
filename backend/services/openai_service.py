@@ -1,9 +1,10 @@
 """OpenAI Integration Service for text generation and evaluations."""
 
 import json
+import asyncio
 from typing import Optional
 from backend.config import settings
-from langchain_openai import ChatOpenAI, AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
@@ -24,17 +25,7 @@ class OpenAIService:
                 temperature=0.7,
                 max_tokens=2000,
             )
-        # Priority 2: Azure OpenAI
-        elif settings.use_azure:
-            return AzureChatOpenAI(
-                api_key=settings.azure_openai_api_key,
-                api_version=settings.azure_openai_api_version,
-                azure_endpoint=settings.azure_openai_endpoint,
-                deployment_name=settings.azure_openai_deployment,
-                temperature=0.7,
-                max_tokens=2000,
-            )
-        # Priority 3: Google Gemini
+        # Priority 2: Google Gemini
         elif settings.use_gemini:
             return ChatGoogleGenerativeAI(
                 google_api_key=settings.google_api_key,
@@ -47,11 +38,14 @@ class OpenAIService:
     async def generate_text(self, prompt: str) -> str:
         """Generate text from a prompt."""
         try:
-            response = self.llm.invoke(prompt)
+            response = await asyncio.to_thread(self._invoke_llm, prompt)
             return response.content if hasattr(response, 'content') else str(response)
         except Exception as e:
             print(f"Error generating text: {e}")
             raise
+
+    def _invoke_llm(self, prompt: str):
+        return self.llm.invoke(prompt)
     
     async def generate_json(self, prompt: str) -> dict:
         """Generate JSON response from a prompt."""

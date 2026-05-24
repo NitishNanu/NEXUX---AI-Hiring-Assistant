@@ -43,7 +43,7 @@ Provide a thorough, well-structured response:"""
 
 
 def _get_embeddings():
-    """Initialize the embedding model (OpenAI RECOMMENDED > Azure > Gemini > HuggingFace fallback)."""
+    """Initialize the embedding model (OpenAI RECOMMENDED > Gemini > HuggingFace fallback)."""
     global _embeddings
     if _embeddings is not None:
         return _embeddings
@@ -55,16 +55,7 @@ def _get_embeddings():
             api_key=settings.openai_api_key,
             model="text-embedding-3-small",  # Latest embedding model
         )
-    # Priority 2: Azure OpenAI
-    elif settings.use_azure:
-        from langchain_openai import AzureOpenAIEmbeddings
-        _embeddings = AzureOpenAIEmbeddings(
-            azure_deployment=settings.azure_openai_embedding_deployment,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
-            api_version=settings.azure_openai_api_version,
-        )
-    # Priority 3: Google Gemini
+    # Priority 2: Google Gemini
     elif settings.use_gemini:
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
         _embeddings = GoogleGenerativeAIEmbeddings(
@@ -82,7 +73,7 @@ def _get_embeddings():
 
 
 def _get_llm():
-    """Initialize the LLM (OpenAI RECOMMENDED > Azure > Gemini)."""
+    """Initialize the LLM (OpenAI RECOMMENDED > Gemini)."""
     # Priority 1: Standard OpenAI GPT (RECOMMENDED - best quality & fastest)
     if settings.use_openai:
         from langchain_openai import ChatOpenAI
@@ -92,18 +83,7 @@ def _get_llm():
             temperature=0.7,
             max_tokens=2048,
         )
-    # Priority 2: Azure OpenAI
-    elif settings.use_azure:
-        from langchain_openai import AzureChatOpenAI
-        return AzureChatOpenAI(
-            azure_deployment=settings.azure_openai_deployment,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
-            api_version=settings.azure_openai_api_version,
-            temperature=0.7,
-            max_tokens=2048,
-        )
-    # Priority 3: Google Gemini
+    # Priority 2: Google Gemini
     elif settings.use_gemini:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
@@ -117,7 +97,6 @@ def _get_llm():
             "❌ No LLM API key configured.\n"
             "   RECOMMENDED: Set OPENAI_API_KEY in .env\n"
             "   ALTERNATIVES:\n"
-            "     - AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT\n"
             "     - GOOGLE_API_KEY (free option)"
         )
 

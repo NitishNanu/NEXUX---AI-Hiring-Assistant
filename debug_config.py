@@ -10,15 +10,12 @@ print("=" * 60)
 # LLM Configuration
 print("\n📊 LLM Provider Status:")
 print(f"  OpenAI (GPT) API Key Set: {bool(settings.openai_api_key)}")
-print(f"  Azure OpenAI API Key Set: {bool(settings.azure_openai_api_key)}")
 print(f"  Google API Key Set: {bool(settings.google_api_key)}")
 
 print(f"\n✅ Active LLM Provider: {settings.llm_provider.upper()}")
 
 if settings.llm_provider == "openai":
     print("     → Using gpt-5.4-2026-03-05 (RECOMMENDED ⭐)")
-elif settings.llm_provider == "azure":
-    print(f"     → Using {settings.azure_openai_deployment}")
 elif settings.llm_provider == "gemini":
     print("     → Using gemini-2.0-flash")
 else:

@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from backend.config import settings
 from backend.database import close_client, init_indexes
-from backend.routers import ats, chat, ingest, lora, resume, mock_interview, coding, mcq
+from backend.routers import ats, chat, ingest, lora, resume, coding, mcq
 from backend.routers import mock_interview_enhanced
 from backend.routers.auth import router as auth_router
 
@@ -72,7 +72,6 @@ app.include_router(ats.router)
 app.include_router(chat.router)
 app.include_router(ingest.router)
 app.include_router(lora.router)
-app.include_router(mock_interview.router)
 app.include_router(mock_interview_enhanced.router)
 app.include_router(coding.router)
 app.include_router(mcq.router)

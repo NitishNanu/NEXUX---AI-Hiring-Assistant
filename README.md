@@ -7,7 +7,7 @@ Intelligent HR assistant with RAG-powered chatbot, resume analysis, ATS scoring,
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- Azure OpenAI API keys (or standard OpenAI key)
+- OpenAI API key or Google Gemini API key
 
 ### 1. Setup Environment
 
@@ -17,7 +17,7 @@ cd "AI Hiring Assistant"
 
 # Copy env template and fill in your API keys
 cp .env.example .env
-# Edit .env with your Azure OpenAI or OpenAI credentials
+# Edit .env with your OpenAI or Google Gemini credentials
 ```
 
 ### 2. Start Backend

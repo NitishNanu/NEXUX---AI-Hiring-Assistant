@@ -55,6 +55,11 @@ class InterviewRepository:
         follow_up_questions: List[str],
         ai_hints: List[str],
         ideal_answer: str,
+        description: Optional[str] = None,
+        constraints: Optional[List[str]] = None,
+        examples: Optional[List[Dict[str, Any]]] = None,
+        expected_time_complexity: Optional[str] = None,
+        expected_space_complexity: Optional[str] = None,
     ) -> str:
         """Save a question to the database."""
         db = get_db()
@@ -70,6 +75,17 @@ class InterviewRepository:
             "ideal_answer": ideal_answer,
             "created_at": datetime.utcnow(),
         }
+        if description is not None:
+            question["description"] = description
+        if constraints is not None:
+            question["constraints"] = constraints
+        if examples is not None:
+            question["examples"] = examples
+        if expected_time_complexity is not None:
+            question["expected_time_complexity"] = expected_time_complexity
+        if expected_space_complexity is not None:
+            question["expected_space_complexity"] = expected_space_complexity
+
         result = await db.interview_questions.insert_one(question)
         return str(result.inserted_id)
 

@@ -8,13 +8,6 @@ load_dotenv()
 
 class Settings(BaseSettings):
 
-    # --- Azure OpenAI ---
-    azure_openai_api_key: str = ""
-    azure_openai_endpoint: str = ""
-    azure_openai_deployment: str = "gpt-5.4-2026-03-05"
-    azure_openai_api_version: str = "2024-02-01"
-    azure_openai_embedding_deployment: str = "text-embedding-ada-002"
-
     # --- Standard OpenAI (GPT) ---
     openai_api_key: str = ""
 
@@ -46,11 +39,6 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",")]
 
     @property
-    def use_azure(self) -> bool:
-        """Check if Azure OpenAI is configured."""
-        return bool(self.azure_openai_api_key and self.azure_openai_endpoint)
-
-    @property
     def use_openai(self) -> bool:
         """Check if Standard OpenAI (GPT) is configured. RECOMMENDED for better performance."""
         return bool(self.openai_api_key)
@@ -65,8 +53,6 @@ class Settings(BaseSettings):
         """Get active LLM provider."""
         if self.use_openai:
             return "openai"
-        elif self.use_azure:
-            return "azure"
         elif self.use_gemini:
             return "gemini"
         else:
@@ -75,6 +61,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

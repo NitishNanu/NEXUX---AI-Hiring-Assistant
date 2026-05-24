@@ -132,13 +132,14 @@ async def get_next_question(
             )
         elif interview_type == "coding":
             question_data = await engine.generate_coding_question(
-                experience_level="intermediate",
-                weak_topics=resume.get("missing_skills", []),
+                user_context=f"Resume: {resume.get('summary', '')}",
+                role=session.get("selected_role", "SDE"),
+                difficulty="medium",
             )
         elif interview_type == "system_design":
             question_data = await engine.generate_system_design_question(
-                scale="medium",
-                weak_topics=resume.get("missing_skills", []),
+                user_context=f"Resume: {resume.get('summary', '')}",
+                role=session.get("selected_role", "SDE"),
             )
         else:
             # Default to behavioral
@@ -159,6 +160,11 @@ async def get_next_question(
             follow_up_questions=question_data.get("follow_up_questions", []),
             ai_hints=question_data.get("ai_hints", []),
             ideal_answer=question_data.get("ideal_answer", ""),
+            description=question_data.get("description"),
+            constraints=question_data.get("constraints"),
+            examples=question_data.get("examples"),
+            expected_time_complexity=question_data.get("expected_time_complexity"),
+            expected_space_complexity=question_data.get("expected_space_complexity"),
         )
 
         return {
@@ -171,6 +177,11 @@ async def get_next_question(
             "followUpQuestions": question_data.get("follow_up_questions", []),
             "aiHints": question_data.get("ai_hints", []),
             "idealAnswer": question_data.get("ideal_answer", ""),
+            "description": question_data.get("description", ""),
+            "constraints": question_data.get("constraints", []),
+            "examples": question_data.get("examples", []),
+            "expectedTimeComplexity": question_data.get("expected_time_complexity", "O(n)"),
+            "expectedSpaceComplexity": question_data.get("expected_space_complexity", "O(1)"),
         }
 
     except Exception as e:
