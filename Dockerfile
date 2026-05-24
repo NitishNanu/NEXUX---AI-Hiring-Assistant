@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ── Stage 2: Python Backend ─────────────────────────────────────────
-FROM python:3.11-slim AS backend-runtime
+FROM python:3.14-slim AS backend-runtime
 WORKDIR /app
 
 # Install only temporary build tools needed for any compiled dependencies,
