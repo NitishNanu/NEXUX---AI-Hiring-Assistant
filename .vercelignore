@@ -1,0 +1,22 @@
+# Deploy only the frontend for Vercel
+backend/
+backend/**
+data/
+data/**
+Dockerfile
+docker-compose.yml
+.dockerignore
+.vercelignore
+.git/
+.gitignore
+README.md
+*.md
+.vscode/
+.vscode/**
+.idea/
+.env
+.env.*
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/

@@ -1,0 +1,31 @@
+# Ignore local Python and Node artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.tsbuildinfo
+*.log
+.DS_Store
+.idea/
+.vscode/
+.git/
+.gitignore
+.env
+.env.*
+
+# Ignore large local data directories that are not needed for image build
+data/
+
+# Keep backend source and frontend source only
+!backend/
+!frontend/
