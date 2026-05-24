@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <style>
+      .bg { fill: #f7fafc; }
+      .title { font: 700 34px Arial, sans-serif; fill: #102033; }
+      .subtitle { font: 400 17px Arial, sans-serif; fill: #526273; }
+      .box { fill: #ffffff; stroke: #b8c4d4; stroke-width: 2; rx: 14; }
+      .box-blue { fill: #e9f2ff; stroke: #4b83d1; }
+      .box-green { fill: #eaf8f0; stroke: #3f9b6d; }
+      .box-orange { fill: #fff3e2; stroke: #dc8a2d; }
+      .box-purple { fill: #f0ecff; stroke: #7b63c6; }
+      .box-red { fill: #fff0f0; stroke: #d65c5c; }
+      .label { font: 700 18px Arial, sans-serif; fill: #172334; }
+      .small { font: 400 14px Arial, sans-serif; fill: #4d5b6a; }
+      .arrow { stroke: #526273; stroke-width: 2.4; fill: none; marker-end: url(#arrowhead); }
+      .arrow-soft { stroke: #7d8b99; stroke-width: 2; fill: none; marker-end: url(#arrowhead-soft); stroke-dasharray: 8 7; }
+      .group-title { font: 700 20px Arial, sans-serif; fill: #26384d; }
+      .group { fill: none; stroke: #d3dce8; stroke-width: 2; stroke-dasharray: 10 8; rx: 22; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <path d="M0,0 L12,4.5 L0,9 Z" fill="#526273"/>
+    </marker>
+    <marker id="arrowhead-soft" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <path d="M0,0 L12,4.5 L0,9 Z" fill="#7d8b99"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="1100"/>
+  <text x="800" y="58" text-anchor="middle" class="title">AI Hiring Assistant - Workflow Graph</text>
+  <text x="800" y="88" text-anchor="middle" class="subtitle">Resume analysis, ATS scoring, RAG chatbot, interview preparation, and fine-tuning flow</text>
+
+  <rect x="55" y="125" width="1490" height="130" class="group"/>
+  <text x="80" y="158" class="group-title">User Interface Layer</text>
+
+  <rect x="110" y="175" width="230" height="58" class="box box-blue"/>
+  <text x="225" y="199" text-anchor="middle" class="label">User</text>
+  <text x="225" y="219" text-anchor="middle" class="small">Recruiter / Candidate</text>
+
+  <rect x="500" y="175" width="260" height="58" class="box box-blue"/>
+  <text x="630" y="199" text-anchor="middle" class="label">React Frontend</text>
+  <text x="630" y="219" text-anchor="middle" class="small">Dashboard and feature pages</text>
+
+  <rect x="920" y="175" width="260" height="58" class="box box-blue"/>
+  <text x="1050" y="199" text-anchor="middle" class="label">Feature Selection</text>
+  <text x="1050" y="219" text-anchor="middle" class="small">Resume, ATS, chat, interview</text>
+
+  <path d="M340 204 H500" class="arrow"/>
+  <path d="M760 204 H920" class="arrow"/>
+
+  <rect x="55" y="300" width="1490" height="140" class="group"/>
+  <text x="80" y="333" class="group-title">Input Layer</text>
+
+  <rect x="100" y="360" width="220" height="58" class="box"/>
+  <text x="210" y="384" text-anchor="middle" class="label">Upload Resume</text>
+  <text x="210" y="404" text-anchor="middle" class="small">PDF / DOCX / TXT</text>
+
+  <rect x="380" y="360" width="220" height="58" class="box"/>
+  <text x="490" y="384" text-anchor="middle" class="label">Job Description</text>
+  <text x="490" y="404" text-anchor="middle" class="small">Role requirements</text>
+
+  <rect x="660" y="360" width="220" height="58" class="box"/>
+  <text x="770" y="384" text-anchor="middle" class="label">HR Query</text>
+  <text x="770" y="404" text-anchor="middle" class="small">Chatbot question</text>
+
+  <rect x="940" y="360" width="220" height="58" class="box"/>
+  <text x="1050" y="384" text-anchor="middle" class="label">Interview Request</text>
+  <text x="1050" y="404" text-anchor="middle" class="small">Question generation</text>
+
+  <rect x="1220" y="360" width="220" height="58" class="box"/>
+  <text x="1330" y="384" text-anchor="middle" class="label">LoRA Config</text>
+  <text x="1330" y="404" text-anchor="middle" class="small">Fine-tuning setup</text>
+
+  <path d="M1050 233 V285 H210 V360" class="arrow"/>
+  <path d="M1050 233 V285 H490 V360" class="arrow"/>
+  <path d="M1050 233 V360" class="arrow"/>
+  <path d="M1050 233 V285 H770 V360" class="arrow"/>
+  <path d="M1050 233 V285 H1330 V360" class="arrow"/>
+
+  <rect x="55" y="485" width="1490" height="265" class="group"/>
+  <text x="80" y="518" class="group-title">FastAPI Backend and AI Service Layer</text>
+
+  <rect x="640" y="535" width="320" height="62" class="box box-green"/>
+  <text x="800" y="560" text-anchor="middle" class="label">FastAPI Backend</text>
+  <text x="800" y="581" text-anchor="middle" class="small">Routes requests to service modules</text>
+
+  <rect x="90" y="655" width="235" height="62" class="box box-green"/>
+  <text x="207.5" y="680" text-anchor="middle" class="label">Resume Parser</text>
+  <text x="207.5" y="701" text-anchor="middle" class="small">Text, skills, experience</text>
+
+  <rect x="380" y="655" width="235" height="62" class="box box-orange"/>
+  <text x="497.5" y="680" text-anchor="middle" class="label">ATS Engine</text>
+  <text x="497.5" y="701" text-anchor="middle" class="small">Score and job matching</text>
+
+  <rect x="680" y="655" width="235" height="62" class="box box-purple"/>
+  <text x="797.5" y="680" text-anchor="middle" class="label">RAG Pipeline</text>
+  <text x="797.5" y="701" text-anchor="middle" class="small">FAISS retrieval and context</text>
+
+  <rect x="980" y="655" width="235" height="62" class="box box-purple"/>
+  <text x="1097.5" y="680" text-anchor="middle" class="label">Interview Generator</text>
+  <text x="1097.5" y="701" text-anchor="middle" class="small">Technical and HR questions</text>
+
+  <rect x="1275" y="655" width="235" height="62" class="box box-red"/>
+  <text x="1392.5" y="680" text-anchor="middle" class="label">LoRA Manager</text>
+  <text x="1392.5" y="701" text-anchor="middle" class="small">Training data and scripts</text>
+
+  <path d="M210 418 V468 H800 V535" class="arrow"/>
+  <path d="M490 418 V468 H800 V535" class="arrow"/>
+  <path d="M770 418 V468 H800 V535" class="arrow"/>
+  <path d="M1050 418 V468 H800 V535" class="arrow"/>
+  <path d="M1330 418 V468 H800 V535" class="arrow"/>
+
+  <path d="M800 597 V626 H207.5 V655" class="arrow"/>
+  <path d="M800 597 V626 H497.5 V655" class="arrow"/>
+  <path d="M800 597 V655" class="arrow"/>
+  <path d="M800 597 V626 H1097.5 V655" class="arrow"/>
+  <path d="M800 597 V626 H1392.5 V655" class="arrow"/>
+
+  <path d="M325 686 H380" class="arrow-soft"/>
+  <path d="M615 686 H680" class="arrow-soft"/>
+  <path d="M915 686 H980" class="arrow-soft"/>
+
+  <rect x="55" y="795" width="1490" height="135" class="group"/>
+  <text x="80" y="828" class="group-title">Knowledge and Model Layer</text>
+
+  <rect x="225" y="855" width="260" height="58" class="box"/>
+  <text x="355" y="879" text-anchor="middle" class="label">Parsed Resume Data</text>
+  <text x="355" y="899" text-anchor="middle" class="small">Skills, education, projects</text>
+
+  <rect x="560" y="855" width="260" height="58" class="box"/>
+  <text x="690" y="879" text-anchor="middle" class="label">FAISS Vector DB</text>
+  <text x="690" y="899" text-anchor="middle" class="small">HR documents and context</text>
+
+  <rect x="895" y="855" width="260" height="58" class="box"/>
+  <text x="1025" y="879" text-anchor="middle" class="label">LLM Provider</text>
+  <text x="1025" y="899" text-anchor="middle" class="small">OpenAI / Azure / Gemini</text>
+
+  <rect x="1230" y="855" width="260" height="58" class="box"/>
+  <text x="1360" y="879" text-anchor="middle" class="label">HR Training Data</text>
+  <text x="1360" y="899" text-anchor="middle" class="small">JSONL and fine-tuning assets</text>
+
+  <path d="M207.5 717 V762 H355 V855" class="arrow"/>
+  <path d="M797.5 717 V762 H690 V855" class="arrow"/>
+  <path d="M1097.5 717 V762 H1025 V855" class="arrow"/>
+  <path d="M1392.5 717 V762 H1360 V855" class="arrow"/>
+  <path d="M690 855 V832 H1025 V855" class="arrow-soft"/>
+  <path d="M355 855 V832 H497.5 V717" class="arrow-soft"/>
+
+  <rect x="55" y="975" width="1490" height="95" class="group"/>
+  <text x="80" y="1008" class="group-title">Output Layer</text>
+
+  <rect x="155" y="1025" width="230" height="42" class="box box-blue"/>
+  <text x="270" y="1052" text-anchor="middle" class="label">Resume Analysis</text>
+
+  <rect x="430" y="1025" width="230" height="42" class="box box-orange"/>
+  <text x="545" y="1052" text-anchor="middle" class="label">ATS / Match Score</text>
+
+  <rect x="705" y="1025" width="230" height="42" class="box box-purple"/>
+  <text x="820" y="1052" text-anchor="middle" class="label">Chatbot Answer</text>
+
+  <rect x="980" y="1025" width="230" height="42" class="box box-purple"/>
+  <text x="1095" y="1052" text-anchor="middle" class="label">Interview Questions</text>
+
+  <rect x="1255" y="1025" width="230" height="42" class="box box-red"/>
+  <text x="1370" y="1052" text-anchor="middle" class="label">Fine-Tuning Assets</text>
+
+  <path d="M355 913 V960 H270 V1025" class="arrow"/>
+  <path d="M497.5 717 V960 H545 V1025" class="arrow"/>
+  <path d="M1025 913 V960 H820 V1025" class="arrow"/>
+  <path d="M1025 913 V960 H1095 V1025" class="arrow"/>
+  <path d="M1360 913 V960 H1370 V1025" class="arrow"/>
+</svg>

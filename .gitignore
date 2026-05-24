@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs and runtime artifacts
+*.log
+*.sqlite3
+backend-server.log
+backend-server.err.log
+frontend-static.log
+frontend-static.err.log
+
+# Frontend builds and deps
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.tsbuildinfo
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Generated project data
+data/faiss_index/
+data/uploads/
