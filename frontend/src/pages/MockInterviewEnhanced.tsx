@@ -23,6 +23,8 @@ import { InterviewCodingEditor } from '../components/interview/InterviewCodingEd
 import { InterviewAnalyticsDashboard } from '../components/interview/InterviewAnalyticsDashboard';
 import GlassCard from '../components/ui/GlassCard';
 import Badge from '../components/ui/Badge';
+import { nexusClient } from '../api/nexusClient';
+import { codingApi } from '../api/codingApi';
 import { nexusToast } from '../components/ui/NexusToast';
 
 const interviewRoles = [
@@ -134,7 +136,13 @@ export default function MockInterview() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [questionLoading, setQuestionLoading] = useState(false);
+  const [hints, setHints] = useState<string[]>([]);
+  const [currentEvaluation, setCurrentEvaluation] = useState<any>(null);
   const [sessionData, setSessionData] = useState<any>(null);
+  const totalInterviewQuestions = 5;
+  const interviewLength = sessionId ? totalInterviewQuestions : questions.length;
+  const currentQuestion = questions[currentQuestionIndex] ?? null;
 
   // Onboarding animation
   const [onboardingProgress, setOnboardingProgress] = useState(0);
@@ -145,6 +153,112 @@ export default function MockInterview() {
     { label: 'Generating Questions', icon: '🤖', duration: 2 },
     { label: 'Building Interview', icon: '🏗️', duration: 1 },
   ];
+
+  const interviewTypeMap: Record<string, string> = {
+    sde: 'coding',
+    backend: 'coding',
+    ml: 'coding',
+    faang_mode: 'coding',
+    frontend: 'technical',
+    devops: 'technical',
+    pm: 'behavioral',
+    rapid_fire: 'technical',
+  };
+
+  const fetchNextQuestion = async (session_id: string) => {
+    setQuestionLoading(true);
+    try {
+      const response = await nexusClient.get(`/mock-interview/question/${session_id}`);
+      const question = response.data;
+      setQuestions((prevQuestions) => [...prevQuestions, question]);
+      return question;
+    } catch (error) {
+      console.error('Unable to fetch next question', error);
+      nexusToast('Unable to fetch the next question.', 'error');
+      return null;
+    } finally {
+      setQuestionLoading(false);
+    }
+  };
+
+  const handleGetHints = async () => {
+    if (!sessionId || !questions[currentQuestionIndex]?.id) {
+      nexusToast('No active question for hints.', 'error');
+      return;
+    }
+
+    try {
+      const response = await nexusClient.get(
+        `/mock-interview/hints/${sessionId}/${questions[currentQuestionIndex].id}`
+      );
+      setHints(response.data.hints || []);
+      nexusToast.success('Hints loaded');
+    } catch (error) {
+      console.error('Error loading hints', error);
+      nexusToast('Unable to load hints', 'error');
+    }
+  };
+
+  const handleCodingRun = async (code: string, language: string) => {
+    if (!sessionId || !questions[currentQuestionIndex]?.id) {
+      const message = 'Cannot run code without an active interview session.';
+      nexusToast(message, 'error');
+      return {
+        success: false,
+        passed: 0,
+        total: 0,
+        test_results: [],
+        execution_time_ms: 0,
+        errors: [message],
+      };
+    }
+
+    return await codingApi.runCode({
+      interview_session_id: sessionId,
+      question_id: questions[currentQuestionIndex].id,
+      code,
+      language,
+      duration_seconds: 0,
+    });
+  };
+
+  const handleCodingSubmit = async (code: string, language: string) => {
+    if (!sessionId || !questions[currentQuestionIndex]?.id) {
+      nexusToast('No active interview session available.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const evaluation = await codingApi.submitSolution({
+        interview_session_id: sessionId,
+        question_id: questions[currentQuestionIndex].id,
+        code,
+        language,
+        duration_seconds: 0,
+      });
+      setCurrentEvaluation(evaluation);
+      nexusToast.success(
+        `Submitted! ${evaluation.passed_tests}/${evaluation.total_tests} tests passed.`
+      );
+
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+        const nextQuestion = await fetchNextQuestion(sessionId);
+        if (nextQuestion) {
+          setCurrentQuestionIndex((prev) => prev + 1);
+        } else {
+          setStep('results');
+        }
+      }
+    } catch (error) {
+      console.error('Submit failed', error);
+      nexusToast('Failed to submit coding solution.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRoleSelect = async (role: any) => {
     setSelectedRole(role);
@@ -166,22 +280,39 @@ export default function MockInterview() {
 
   const startInterview = async (role: any) => {
     setLoading(true);
-    try {
-      // Call backend to start interview
-      // const res = await fetch('/api/mock-interview/start', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({
-      //     interview_type: role.id,
-      //     selected_role: role.title,
-      //   }),
-      // });
-      // const data = await res.json();
+    setSessionData(null);
+    setSessionId(null);
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setHints([]);
+    setCurrentEvaluation(null);
 
-      // Mock response
+    try {
+      const interviewType = interviewTypeMap[role.id] || 'technical';
+      const response = await nexusClient.post('/mock-interview/start', {
+        interview_type: interviewType,
+        selected_role: role.title,
+      });
+
+      const session_id = response.data.session_id;
+      setSessionId(session_id);
+      setSessionData({
+        sessionId: session_id,
+        role,
+        startTime: new Date(),
+      });
+
+      const question = await fetchNextQuestion(session_id);
+      if (!question) {
+        throw new Error('No interview question available');
+      }
+
+      setStep('interview');
+      nexusToast.success(`Starting ${role.title} interview!`);
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      nexusToast('Unable to start the enhanced interview. Falling back to a quick local demo.', 'error');
+
       const mockQuestions = Array.from({ length: 5 }).map((_, idx) => ({
         id: `q_${idx}`,
         category: idx % 2 === 0 ? 'behavioral' : 'technical',
@@ -195,16 +326,12 @@ export default function MockInterview() {
       }));
 
       setSessionData({
-        sessionId: 'sess_12345',
-        role: role,
+        sessionId: 'demo_session',
+        role,
         startTime: new Date(),
       });
       setQuestions(mockQuestions);
       setStep('interview');
-      nexusToast.success(`Starting ${role.title} interview!`);
-    } catch (error) {
-      console.error('Error starting interview:', error);
-      nexusToast.error('Failed to start interview');
     } finally {
       setLoading(false);
     }
@@ -406,7 +533,7 @@ export default function MockInterview() {
                     {selectedRole?.title} Interview
                   </h2>
                   <p className="text-white/60">
-                    Question {currentQuestionIndex + 1} of {questions.length}
+                    Question {currentQuestionIndex + 1} of {interviewLength}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -423,7 +550,7 @@ export default function MockInterview() {
               <div className="mb-8 h-2 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
                   animate={{
-                    width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`,
+                    width: `${((currentQuestionIndex + 1) / Math.max(interviewLength, 1)) * 100}%`,
                   }}
                   transition={{ duration: 0.5 }}
                   className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
@@ -431,32 +558,24 @@ export default function MockInterview() {
               </div>
 
               {/* Question area - using coding editor if needed */}
-              {questions[currentQuestionIndex]?.category === 'coding' ? (
+              {currentQuestion?.category === 'coding' ? (
                 <InterviewCodingEditor
                   problem={{
-                    title: questions[currentQuestionIndex].questionText,
-                    description: 'Solve this coding problem',
-                    constraints: ['Time: O(n)', 'Space: O(1)'],
-                    examples: [
-                      {
-                        input: '[1,2,3]',
-                        output: '6',
-                        explanation: 'Sum of elements',
-                      },
-                    ],
-                    expectedTimeComplexity: 'O(n)',
-                    expectedSpaceComplexity: 'O(1)',
+                    id: currentQuestion?.id,
+                    title: currentQuestion?.questionText || 'Coding Challenge',
+                    description:
+                      currentQuestion?.description || currentQuestion?.whyAsked ||
+                      'Solve this coding problem',
+                    constraints: currentQuestion?.constraints || ['Time: O(n)', 'Space: O(1)'],
+                    examples: currentQuestion?.examples || [],
+                    expectedTimeComplexity: currentQuestion?.expectedTimeComplexity || 'O(n)',
+                    expectedSpaceComplexity: currentQuestion?.expectedSpaceComplexity || 'O(1)',
                   }}
-                  onSubmit={(code, language) => {
-                    nexusToast.success('Code submitted!');
-                    // Move to next question
-                    if (currentQuestionIndex < questions.length - 1) {
-                      setCurrentQuestionIndex(currentQuestionIndex + 1);
-                    } else {
-                      setStep('results');
-                    }
-                  }}
-                  onGetHints={() => nexusToast.info('Showing hints...')}
+                  hints={hints}
+                  onRun={handleCodingRun}
+                  onSubmit={handleCodingSubmit}
+                  onGetHints={handleGetHints}
+                  isLoading={loading || questionLoading}
                 />
               ) : (
                 // Text answer area

@@ -21,7 +21,7 @@ import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import AtsCheckerPage from './pages/AtsCheckerPage';
 import InterviewPrep from './pages/InterviewPrep';
-import MockInterview from './pages/MockInterview';
+import MockInterview from './pages/MockInterviewEnhanced';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import JobAnalyzerPage from './pages/JobAnalyzerPage';
 import ResumeLab from './pages/ResumeLab';

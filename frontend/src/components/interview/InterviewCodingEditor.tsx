@@ -6,20 +6,25 @@ import toast from 'react-hot-toast';
 
 interface CodingEditorProps {
   problem: {
+    id?: string;
     title: string;
-    description: string;
+    description?: string;
     constraints: string[];
     examples: Array<{ input: string; output: string; explanation: string }>;
     expectedTimeComplexity: string;
     expectedSpaceComplexity: string;
   };
-  onSubmit: (code: string, language: string) => void;
+  hints?: string[];
+  onRun?: (code: string, language: string) => Promise<any>;
+  onSubmit: (code: string, language: string) => Promise<void> | void;
   onGetHints: () => void;
   isLoading?: boolean;
 }
 
 export function InterviewCodingEditor({
   problem,
+  hints = [],
+  onRun,
   onSubmit,
   onGetHints,
   isLoading = false,
@@ -29,6 +34,9 @@ export function InterviewCodingEditor({
   const [activeTab, setActiveTab] = useState('editor'); // editor, tests, hints
   const [testResults, setTestResults] = useState<any>(null);
   const [showOutput, setShowOutput] = useState(false);
+  const [runLoading, setRunLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
   const editorRef = useRef(null);
 
   const languages = [
@@ -39,35 +47,49 @@ export function InterviewCodingEditor({
   ];
 
   const handleRun = async () => {
+    if (!code.trim()) {
+      toast.error('Please write some code first');
+      return;
+    }
+
+    setRunLoading(true);
+    setRunError(null);
+
     try {
-      // Simulate code execution
-      const result = {
-        status: 'completed',
-        passed: 2,
-        total: 3,
-        runtime: '45ms',
-        memory: '12.5MB',
-        tests: [
-          {
-            input: problem.examples[0]?.input || 'N/A',
-            output: problem.examples[0]?.output || 'N/A',
-            passed: true,
-            time: '10ms',
-          },
-          {
-            input: problem.examples[1]?.input || 'N/A',
-            output: problem.examples[1]?.output || 'N/A',
-            passed: true,
-            time: '15ms',
-          },
-          {
-            input: 'Edge case',
-            output: 'Expected',
-            passed: false,
-            time: '20ms',
-          },
-        ],
-      };
+      let result: any;
+
+      if (onRun) {
+        result = await onRun(code, language);
+      } else {
+        result = {
+          success: true,
+          passed: 2,
+          total: 3,
+          test_results: [
+            {
+              input: problem.examples[0]?.input || 'N/A',
+              expected_output: problem.examples[0]?.output || 'N/A',
+              actual_output: problem.examples[0]?.output || 'N/A',
+              passed: true,
+              error: null,
+            },
+            {
+              input: problem.examples[1]?.input || 'N/A',
+              expected_output: problem.examples[1]?.output || 'N/A',
+              actual_output: problem.examples[1]?.output || 'N/A',
+              passed: true,
+              error: null,
+            },
+            {
+              input: 'Edge case',
+              expected_output: 'Expected',
+              actual_output: 'Wrong output',
+              passed: false,
+              error: null,
+            },
+          ],
+        };
+      }
 
       setTestResults(result);
       setShowOutput(true);
@@ -78,16 +100,27 @@ export function InterviewCodingEditor({
         toast.error(`${result.total - result.passed} test(s) failed`);
       }
     } catch (error) {
+      setRunError(error instanceof Error ? error.message : 'Error running code');
       toast.error('Error running code');
+    } finally {
+      setRunLoading(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!code.trim()) {
       toast.error('Please write some code first');
       return;
     }
-    onSubmit(code, language);
+
+    setSubmitLoading(true);
+    try {
+      await onSubmit(code, language);
+    } catch (error) {
+      toast.error('Error submitting code');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const handleCopyCode = () => {
@@ -118,7 +151,10 @@ export function InterviewCodingEditor({
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-xl font-bold text-white mb-2">{problem.title}</h3>
-          <div className="flex items-center gap-2">
+          <p className="text-white/60 text-sm mb-3">
+            {problem.description || 'Write code to solve the problem and pass the test cases.'}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/30">
               Difficulty: {problem?.constraints?.[0] || 'Medium'}
             </span>
@@ -200,31 +236,37 @@ export function InterviewCodingEditor({
             exit={{ opacity: 0 }}
             className="flex-1 overflow-y-auto space-y-4"
           >
-            {problem.examples.map((example, idx) => (
-              <div key={idx} className="p-4 rounded-lg border border-white/10 bg-white/5 space-y-2">
-                <h4 className="font-semibold text-white">Example {idx + 1}</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-white/60 mb-1 font-medium">Input:</p>
-                    <pre className="bg-black/50 p-2 rounded border border-white/10 text-green-400 font-mono text-xs overflow-x-auto">
-                      {example.input}
-                    </pre>
+            {problem.examples && problem.examples.length > 0 ? (
+              problem.examples.map((example, idx) => (
+                <div key={idx} className="p-4 rounded-lg border border-white/10 bg-white/5 space-y-2">
+                  <h4 className="font-semibold text-white">Example {idx + 1}</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-white/60 mb-1 font-medium">Input:</p>
+                      <pre className="bg-black/50 p-2 rounded border border-white/10 text-green-400 font-mono text-xs overflow-x-auto">
+                        {example.input}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-white/60 mb-1 font-medium">Output:</p>
+                      <pre className="bg-black/50 p-2 rounded border border-white/10 text-blue-400 font-mono text-xs overflow-x-auto">
+                        {example.output}
+                      </pre>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white/60 mb-1 font-medium">Output:</p>
-                    <pre className="bg-black/50 p-2 rounded border border-white/10 text-blue-400 font-mono text-xs overflow-x-auto">
-                      {example.output}
-                    </pre>
-                  </div>
+                  {example.explanation && (
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-white/60 text-xs mb-1 font-medium">Explanation:</p>
+                      <p className="text-white/70 text-xs leading-relaxed">{example.explanation}</p>
+                    </div>
+                  )}
                 </div>
-                {example.explanation && (
-                  <div className="pt-2 border-t border-white/10">
-                    <p className="text-white/60 text-xs mb-1 font-medium">Explanation:</p>
-                    <p className="text-white/70 text-xs leading-relaxed">{example.explanation}</p>
-                  </div>
-                )}
+              ))
+            ) : (
+              <div className="p-4 rounded-lg border border-white/10 bg-white/5 text-white/70">
+                No sample cases are available for this problem.
               </div>
-            ))}
+            )}
           </motion.div>
         )}
 
@@ -236,16 +278,37 @@ export function InterviewCodingEditor({
             exit={{ opacity: 0 }}
             className="flex-1 overflow-y-auto space-y-4"
           >
-            <div className="p-6 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-center">
-              <Lightbulb className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
-              <p className="text-white/70 mb-4 text-sm">Need help solving this problem?</p>
-              <button
-                onClick={onGetHints}
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold transition-all"
-              >
-                Get AI Hints
-              </button>
-            </div>
+            {hints && hints.length > 0 ? (
+              <div className="space-y-4">
+                <div className="p-6 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
+                  <h4 className="text-white font-semibold mb-3">AI Hints</h4>
+                  <ul className="space-y-2 text-sm text-white/80">
+                    {hints.map((hint, idx) => (
+                      <li key={idx} className="rounded-lg bg-black/40 p-3 border border-white/10">
+                        {hint}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  onClick={onGetHints}
+                  className="w-full px-6 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold transition-all"
+                >
+                  Refresh Hints
+                </button>
+              </div>
+            ) : (
+              <div className="p-6 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-center">
+                <Lightbulb className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
+                <p className="text-white/70 mb-4 text-sm">Need help solving this problem?</p>
+                <button
+                  onClick={onGetHints}
+                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold transition-all"
+                >
+                  Get AI Hints
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -275,7 +338,7 @@ export function InterviewCodingEditor({
             </div>
 
             <div className="space-y-2">
-              {testResults.tests.map((test: any, idx: number) => (
+              {(testResults.test_results ?? testResults.tests ?? []).map((test: any, idx: number) => (
                 <div
                   key={idx}
                   className={`p-3 rounded-lg border flex items-start gap-3 ${
@@ -289,8 +352,16 @@ export function InterviewCodingEditor({
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-white/70">
-                      <span className="font-semibold">Test {idx + 1}</span> - {test.time}
+                      <span className="font-semibold">Test {idx + 1}</span>
+                      {test.time ? ` - ${test.time}` : ''}
                     </p>
+                    <p className="text-xs text-white/70">
+                      Expected: {test.expected_output ?? test.output}
+                    </p>
+                    <p className="text-xs text-white/70">
+                      Actual: {test.actual_output ?? test.output ?? 'N/A'}
+                    </p>
+                    {test.error && <p className="text-xs text-red-300">Error: {test.error}</p>}
                   </div>
                 </div>
               ))}
@@ -305,7 +376,7 @@ export function InterviewCodingEditor({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleRun}
-          disabled={isLoading}
+          disabled={isLoading || runLoading}
           className="flex-1 min-w-[140px] px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-sm transition-all hover:shadow-lg hover:shadow-blue-500/30 disabled:opacity-50"
         >
           <Play className="w-4 h-4 inline mr-2" />
@@ -343,7 +414,7 @@ export function InterviewCodingEditor({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleSubmit}
-          disabled={isLoading}
+          disabled={isLoading || submitLoading}
           className="flex-1 min-w-[140px] px-4 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm transition-all hover:shadow-lg hover:shadow-purple-500/30 disabled:opacity-50"
         >
           <TrendingUp className="w-4 h-4 inline mr-2" />
