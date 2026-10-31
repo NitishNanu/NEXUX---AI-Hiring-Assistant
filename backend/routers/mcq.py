@@ -1,19 +1,87 @@
 """MCQ questions router for interview system."""
 
 from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from bson.objectid import ObjectId
 
 from backend.database import get_db
+from backend.logger import get_logger
 from backend.models.interview import SubmitMCQRequest
 from backend.routers.auth import verify_token
 
 router = APIRouter(prefix="/api/mcq", tags=["MCQ Questions"])
+log = get_logger(__name__)
 
 
 async def get_current_user_id(token: str = Depends(verify_token)) -> str:
     """Extract user_id from token."""
     return token.get("sub")
+
+
+@router.get("/questions")
+async def list_mcq_questions(
+    user_id: str = Depends(get_current_user_id),
+    page: int = 1,
+    page_size: int = 20,
+    category: Optional[str] = None,
+    difficulty: Optional[str] = None,
+    topic: Optional[str] = None,
+):
+    """
+    Paginated list of MCQ questions with optional filters.
+
+    Query params
+    ------------
+    page        : Page number starting at 1 (default 1)
+    page_size   : Items per page 1–100 (default 20)
+    category    : Filter by category (e.g. dsa, system_design, python)
+    difficulty  : Filter by easy | medium | hard
+    topic       : Filter by topic string
+    """
+    db = get_db()
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+    skip = (page - 1) * page_size
+
+    query: dict = {}
+    if category:
+        query["category"] = category.lower()
+    if difficulty:
+        query["difficulty"] = difficulty.lower()
+    if topic:
+        query["topic"] = topic
+
+    try:
+        total = await db.mcq_questions.count_documents(query)
+        questions = (
+            await db.mcq_questions.find(query)
+            .skip(skip)
+            .limit(page_size)
+            .to_list(None)
+        )
+
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": max(1, -(-total // page_size)),
+            "questions": [
+                {
+                    "id": str(q["_id"]),
+                    "question": q.get("question", ""),
+                    "options": q.get("options", []),
+                    "difficulty": q.get("difficulty", ""),
+                    "category": q.get("category", ""),
+                    "topic": q.get("topic", ""),
+                }
+                for q in questions
+            ],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/question/{question_id}")
@@ -35,9 +103,12 @@ async def get_mcq_question(
             "options": question.get("options", []),
             "difficulty": question.get("difficulty", ""),
             "topic": question.get("topic", ""),
+            "category": question.get("category", ""),
             "explanation": question.get("explanation", ""),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -77,16 +148,27 @@ async def submit_mcq_answer(
             "created_at": datetime.utcnow(),
         }
 
-        result = await db.mcq_answers.insert_one(answer)
+        result = await db.mcq_attempts.insert_one(answer)
 
-        # Update session
-        await db.interview_sessions.update_one(
-            {"_id": ObjectId(request.interview_session_id)},
-            {
-                "$push": {"answers": str(result.inserted_id)},
-                "$inc": {"completed_questions": 1},
-                "$set": {"updated_at": datetime.utcnow()},
-            },
+        # Update session (non-critical — fire and forget)
+        if request.interview_session_id:
+            try:
+                await db.interview_sessions.update_one(
+                    {"_id": ObjectId(request.interview_session_id)},
+                    {
+                        "$push": {"answers": str(result.inserted_id)},
+                        "$inc": {"completed_questions": 1},
+                        "$set": {"updated_at": datetime.utcnow()},
+                    },
+                )
+            except Exception:
+                pass
+
+        log.info(
+            "MCQ answer submitted",
+            user_id=user_id,
+            question_id=request.question_id,
+            is_correct=is_correct,
         )
 
         return {
@@ -98,6 +180,8 @@ async def submit_mcq_answer(
             "score": 100 if is_correct else 0,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -113,6 +197,7 @@ async def get_mcq_batch(
     db = get_db()
 
     try:
+        limit = min(max(1, limit), 50)
         questions = (
             await db.mcq_questions.find(
                 {"topic": topic, "difficulty": difficulty}
@@ -121,6 +206,14 @@ async def get_mcq_batch(
             .to_list(None)
         )
 
+        # Fallback: if no topic+difficulty match, try topic only
+        if not questions:
+            questions = (
+                await db.mcq_questions.find({"topic": topic})
+                .limit(limit)
+                .to_list(None)
+            )
+
         return [
             {
                 "id": str(q["_id"]),
@@ -128,6 +221,7 @@ async def get_mcq_batch(
                 "options": q.get("options", []),
                 "difficulty": q.get("difficulty", ""),
                 "topic": q.get("topic", ""),
+                "category": q.get("category", ""),
             }
             for q in questions
         ]
@@ -145,9 +239,11 @@ async def get_mcq_topics(
 
     try:
         topics = await db.mcq_questions.distinct("topic")
+        categories = await db.mcq_questions.distinct("category")
 
         return {
-            "topics": sorted(topics),
+            "topics": sorted(t for t in topics if t),
+            "categories": sorted(c for c in categories if c),
             "total_questions": await db.mcq_questions.count_documents({}),
         }
 
@@ -163,10 +259,7 @@ async def get_user_mcq_stats(
     db = get_db()
 
     try:
-        # Get all MCQ answers for user
-        answers = (
-            await db.mcq_answers.find({"user_id": user_id}).to_list(None)
-        )
+        answers = await db.mcq_attempts.find({"user_id": user_id}).to_list(None)
 
         if not answers:
             return {
@@ -177,58 +270,45 @@ async def get_user_mcq_stats(
                 "by_difficulty": {},
             }
 
-        # Calculate statistics
         total = len(answers)
         correct = sum(1 for a in answers if a.get("is_correct", False))
         accuracy = (correct / total * 100) if total > 0 else 0
 
-        # By topic
-        by_topic = {}
+        # Aggregate by topic
+        by_topic: dict = {}
         for answer in answers:
             topic = answer.get("topic", "Unknown")
-            if topic not in by_topic:
-                by_topic[topic] = {"attempted": 0, "correct": 0}
+            by_topic.setdefault(topic, {"attempted": 0, "correct": 0})
             by_topic[topic]["attempted"] += 1
             if answer.get("is_correct"):
                 by_topic[topic]["correct"] += 1
 
-        # By difficulty
-        by_difficulty = {}
+        # Aggregate by difficulty
+        by_difficulty: dict = {}
         for answer in answers:
             diff = answer.get("difficulty", "unknown").lower()
-            if diff not in by_difficulty:
-                by_difficulty[diff] = {"attempted": 0, "correct": 0}
+            by_difficulty.setdefault(diff, {"attempted": 0, "correct": 0})
             by_difficulty[diff]["attempted"] += 1
             if answer.get("is_correct"):
                 by_difficulty[diff]["correct"] += 1
+
+        def _add_accuracy(d: dict) -> dict:
+            return {
+                k: {
+                    **v,
+                    "accuracy": round(v["correct"] / v["attempted"] * 100, 2)
+                    if v["attempted"] > 0 else 0,
+                }
+                for k, v in d.items()
+            }
 
         return {
             "total_attempted": total,
             "correct": correct,
             "accuracy": round(accuracy, 2),
-            "by_topic": {
-                k: {
-                    "accuracy": round(
-                        v["correct"] / v["attempted"] * 100, 2
-                    )
-                    if v["attempted"] > 0
-                    else 0,
-                    **v,
-                }
-                for k, v in by_topic.items()
-            },
-            "by_difficulty": {
-                k: {
-                    "accuracy": round(
-                        v["correct"] / v["attempted"] * 100, 2
-                    )
-                    if v["attempted"] > 0
-                    else 0,
-                    **v,
-                }
-                for k, v in by_difficulty.items()
-            },
+            "by_topic": _add_accuracy(by_topic),
+            "by_difficulty": _add_accuracy(by_difficulty),
         }
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))

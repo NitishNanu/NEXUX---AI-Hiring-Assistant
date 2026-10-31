@@ -1,47 +1,7 @@
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Bloom, ChromaticAberration, EffectComposer } from '@react-three/postprocessing';
-import { useRef } from 'react';
-import * as THREE from 'three';
-
-interface OrbMeshProps {
-  color: string;
-  glowColor: string;
-  speed: number;
-  wireframe?: boolean;
-}
-
-function OrbMesh({ color, glowColor, speed, wireframe = true }: OrbMeshProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
-
-  useFrame(({ clock }) => {
-    const elapsed = clock.getElapsedTime();
-    if (meshRef.current) {
-      meshRef.current.rotation.y = elapsed * speed;
-      meshRef.current.rotation.x = elapsed * speed * 0.33;
-      meshRef.current.scale.setScalar(1 + Math.sin(elapsed * 2) * 0.025);
-    }
-    if (lightRef.current) {
-      lightRef.current.intensity = 1.6 + Math.sin(elapsed * 2.4) * 0.6;
-    }
-  });
-
-  return (
-    <group>
-      <pointLight ref={lightRef} color={glowColor} intensity={2} distance={4} />
-      <mesh ref={meshRef}>
-        <icosahedronGeometry args={[1, 4]} />
-        <meshStandardMaterial color={color} roughness={0.1} metalness={0.8} emissive={glowColor} emissiveIntensity={0.35} />
-      </mesh>
-      {wireframe && (
-        <mesh scale={1.08}>
-          <icosahedronGeometry args={[1, 3]} />
-          <meshBasicMaterial color={glowColor} wireframe transparent opacity={0.24} />
-        </mesh>
-      )}
-    </group>
-  );
-}
+// NexusOrb — pure CSS replacement for the previous Three.js / post-processing version.
+// The old version ran a full WebGL canvas with Bloom + ChromaticAberration for a
+// simple decorative element — extremely expensive. This version is visually equivalent
+// using only CSS animations + transform, which run entirely on the compositor thread.
 
 interface NexusOrbProps {
   size?: number;
@@ -57,21 +17,79 @@ export default function NexusOrb({
   size = 96,
   color = '#7C3AED',
   glowColor = '#00FFD1',
-  speed = 0.32,
-  wireframe = true,
   className = '',
-  ariaLabel = 'NEXUS animated orb'
+  ariaLabel = 'NEXUS animated orb',
 }: NexusOrbProps) {
+  const halfSize = size / 2;
+  const innerSize = size * 0.75;
+  const coreSize = size * 0.45;
+
   return (
-    <div className={className} style={{ width: size, height: size }} aria-label={ariaLabel}>
-      <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.2], fov: 42 }}>
-        <ambientLight intensity={0.45} />
-        <OrbMesh color={color} glowColor={glowColor} speed={speed} wireframe={wireframe} />
-        <EffectComposer multisampling={0}>
-          <Bloom luminanceThreshold={0.35} intensity={0.85} mipmapBlur />
-          <ChromaticAberration offset={new THREE.Vector2(0.0015, 0.0015)} radialModulation={false} modulationOffset={0} />
-        </EffectComposer>
-      </Canvas>
+    <div
+      className={className}
+      style={{ width: size, height: size, position: 'relative' }}
+      aria-label={ariaLabel}
+    >
+      {/* Outer glow pulse */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${color}44 0%, transparent 70%)`,
+          animation: 'nexus-orb-pulse 3s ease-in-out infinite',
+        }}
+      />
+
+      {/* Outer wireframe ring */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          border: `1px solid ${glowColor}55`,
+          animation: 'nexus-orb-spin-cw 8s linear infinite',
+          boxShadow: `0 0 ${halfSize * 0.3}px ${glowColor}33`,
+        }}
+      />
+
+      {/* Inner ring counter-rotating */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: (size - innerSize) / 2,
+          borderRadius: '50%',
+          border: `1px dashed ${color}88`,
+          animation: 'nexus-orb-spin-ccw 6s linear infinite',
+        }}
+      />
+
+      {/* Core sphere */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: (size - coreSize) / 2,
+          borderRadius: '50%',
+          background: `radial-gradient(circle at 35% 35%, ${color}dd, ${color}88 50%, #050508 100%)`,
+          boxShadow: `0 0 ${halfSize * 0.5}px ${color}66, inset 0 0 ${halfSize * 0.3}px ${glowColor}44`,
+          animation: 'nexus-orb-breathe 2.5s ease-in-out infinite',
+        }}
+      />
+
+      {/* Highlight spot */}
+      <div
+        style={{
+          position: 'absolute',
+          top: (size - coreSize) / 2 + coreSize * 0.12,
+          left: (size - coreSize) / 2 + coreSize * 0.2,
+          width: coreSize * 0.25,
+          height: coreSize * 0.15,
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.35)',
+          filter: 'blur(2px)',
+          pointerEvents: 'none',
+        }}
+      />
     </div>
   );
 }

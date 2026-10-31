@@ -88,7 +88,7 @@ class InterviewAnswer(BaseModel):
     user_answer: str
     answer_type: str = "text"  # text, code, mcq, voice
     duration_seconds: Optional[int] = None
-    
+
     # AI Evaluation
     metrics: Optional[EvaluationMetrics] = None
     strengths: List[StrengthWeakness] = []
@@ -97,17 +97,17 @@ class InterviewAnswer(BaseModel):
     improvement_tips: List[str] = []
     ideal_answer: Optional[str] = None
     rewritten_answer: Optional[str] = None
-    
+
     # For coding questions
     code_output: Optional[str] = None
     test_results: Optional[dict] = None
     execution_time_ms: Optional[int] = None
-    
+
     # For MCQ
     selected_option: Optional[str] = None
     correct_option: Optional[str] = None
     explanation: Optional[str] = None
-    
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -119,23 +119,23 @@ class InterviewSession(BaseModel):
     selected_role: Optional[str] = None
     questions: List[InterviewQuestion] = []
     answers: List[InterviewAnswer] = []
-    
+
     # Session metadata
     start_time: datetime
     end_time: Optional[datetime] = None
     total_duration_seconds: Optional[int] = None
-    
+
     # Scoring
     overall_score: Optional[int] = None
     average_communication_score: Optional[int] = None
     average_technical_score: Optional[int] = None
     average_confidence_score: Optional[int] = None
-    
+
     # Status
     status: str = "in_progress"  # in_progress, completed, paused
     completed_questions: int = 0
     skipped_questions: int = 0
-    
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -146,24 +146,24 @@ class InterviewAnalytics(BaseModel):
     total_interviews: int = 0
     total_questions_attempted: int = 0
     average_score: Optional[int] = None
-    
+
     # Skill scores
     communication_trend: List[int] = []
     coding_trend: List[int] = []
     system_design_trend: List[int] = []
     leadership_trend: List[int] = []
-    
+
     # Topic-wise analytics
     topic_weaknesses: dict = {}  # {topic: score}
     topic_strengths: dict = {}
-    
+
     # Confidence metrics
     confidence_scores: List[int] = []
     readiness_score: Optional[int] = None
-    
+
     # Sessions
     interview_sessions: List[str] = []  # session IDs
-    
+
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -175,19 +175,19 @@ class CodingProblem(BaseModel):
     difficulty: Difficulty
     category: str  # "array", "graph", "dp", etc.
     tags: List[str] = []
-    
+
     # Examples
     examples: List[dict] = []  # [{input: ..., output: ..., explanation: ...}]
-    
+
     # Constraints
     constraints: List[str] = []
     expected_time_complexity: Optional[str] = None
     expected_space_complexity: Optional[str] = None
-    
+
     # Solution
     solution_template: dict = {}  # {language: template_code}
     test_cases: List[dict] = []  # [{input: ..., output: ..., hidden: bool}]
-    
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -204,7 +204,9 @@ class MCQQuestion(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-# Request/Response DTOs
+# ---------------------------------------------------------------------------
+# Request / Response DTOs
+# ---------------------------------------------------------------------------
 
 class StartInterviewRequest(BaseModel):
     """Request to start a new interview session."""
@@ -277,19 +279,24 @@ class CodingEvaluationResponse(BaseModel):
 
 
 class UserProfileForInterview(BaseModel):
-    """User profile data for interview context."""
+    """
+    User profile data used to personalise interview question generation.
+
+    This model has a single definition of each field — duplicate field
+    declarations were removed (they caused Pydantic v2 ValidationError).
+    """
     user_id: str
-    name: str
-    email: str
+    name: str = ""
+    email: str = ""
+
+    # Resume-derived fields
     resume_skills: List[str] = []
     experience_years: int = 0
-    target_role: str = ""
-    weak_areas: List[str] = []
-    previous_scores: List[int] = []
-    target_role: Optional[str] = None
-    years_of_experience: Optional[int] = None
-    skills: List[str] = []
-    projects: List[dict] = []
     ats_score: Optional[int] = None
+    projects: List[dict] = []
+
+    # Interview targeting
+    target_role: Optional[str] = None
     weak_areas: List[str] = []
     strong_areas: List[str] = []
+    previous_scores: List[int] = []

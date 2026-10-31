@@ -2,6 +2,50 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Clock, Zap, TrendingUp } from 'lucide-react';
 import { ReactNode } from 'react';
 
+// Moved to module scope so they are not recreated on every render
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      delay: index * 0.1,
+      ease: 'easeOut',
+    },
+  }),
+  hover: {
+    y: -8,
+    transition: { duration: 0.3 },
+  },
+};
+
+const glowVariants = {
+  initial: { opacity: 0.5 },
+  hover: {
+    opacity: [0.5, 1, 0.5],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+    },
+  },
+};
+
+function getDifficultyColor(diff: string) {
+  switch (diff.toLowerCase()) {
+    case 'easy':
+      return 'from-green-400/30 to-emerald-400/30 border-green-500/30 text-green-300';
+    case 'medium':
+      return 'from-yellow-400/30 to-orange-400/30 border-yellow-500/30 text-yellow-300';
+    case 'hard':
+      return 'from-red-400/30 to-orange-400/30 border-red-500/30 text-red-300';
+    case 'expert':
+      return 'from-purple-600/30 to-pink-600/30 border-purple-500/30 text-purple-300';
+    default:
+      return 'from-blue-400/30 to-cyan-400/30 border-blue-500/30 text-blue-300';
+  }
+}
+
 interface PremiumCategoryCardProps {
   icon: ReactNode;
   title: string;
@@ -31,53 +75,12 @@ export function PremiumInterviewCard({
   isSelected = false,
   index = 0,
 }: PremiumCategoryCardProps) {
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        delay: index * 0.1,
-        ease: 'easeOut',
-      },
-    },
-    hover: {
-      y: -8,
-      transition: { duration: 0.3 },
-    },
-  };
-
-  const glowVariants = {
-    initial: { opacity: 0.5 },
-    hover: {
-      opacity: [0.5, 1, 0.5],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-      },
-    },
-  };
-
-  const getDifficultyColor = (diff: string) => {
-    switch (diff.toLowerCase()) {
-      case 'easy':
-        return 'from-green-400/30 to-emerald-400/30 border-green-500/30 text-green-300';
-      case 'medium':
-        return 'from-yellow-400/30 to-orange-400/30 border-yellow-500/30 text-yellow-300';
-      case 'hard':
-        return 'from-red-400/30 to-orange-400/30 border-red-500/30 text-red-300';
-      case 'expert':
-        return 'from-purple-600/30 to-pink-600/30 border-purple-500/30 text-purple-300';
-      default:
-        return 'from-blue-400/30 to-cyan-400/30 border-blue-500/30 text-blue-300';
-    }
-  };
 
   return (
     <motion.button
       onClick={onClick}
       variants={containerVariants}
+      custom={index}
       initial="hidden"
       animate="visible"
       whileHover="hover"

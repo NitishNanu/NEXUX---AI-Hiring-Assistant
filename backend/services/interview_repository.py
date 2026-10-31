@@ -100,23 +100,50 @@ class InterviewRepository:
         feedback: str,
         strengths: List[str],
         improvements: List[str],
+        missing_concepts: Optional[List[str]] = None,
+        # Individual evaluation dimensions (optional — stored if provided)
+        communication: Optional[float] = None,
+        technical_depth: Optional[float] = None,
+        confidence: Optional[float] = None,
+        problem_solving: Optional[float] = None,
+        leadership: Optional[float] = None,
+        clarity: Optional[float] = None,
+        correctness: Optional[float] = None,
+        star_format_adherence: Optional[float] = None,
     ) -> str:
-        """Save user's answer and evaluation."""
+        """Save user's answer and evaluation scores to the database."""
         db = get_db()
-        answer = {
+        answer: Dict[str, Any] = {
             "session_id": session_id,
             "question_id": question_id,
             "user_id": user_id,
             "answer_text": answer_text,
             "duration_seconds": duration_seconds,
-            "score": score,
+            "score": score,                        # overall_score alias
+            "overall_score": score,
             "feedback": feedback,
             "strengths": strengths,
             "improvements": improvements,
+            "missing_concepts": missing_concepts or [],
             "created_at": datetime.utcnow(),
         }
+        # Store dimensions if provided — used by calculate_analytics
+        for dim_name, dim_val in [
+            ("communication", communication),
+            ("technical_depth", technical_depth),
+            ("confidence", confidence),
+            ("problem_solving", problem_solving),
+            ("leadership", leadership),
+            ("clarity", clarity),
+            ("correctness", correctness),
+            ("star_format_adherence", star_format_adherence),
+        ]:
+            if dim_val is not None:
+                answer[dim_name] = dim_val
+
         result = await db.interview_answers.insert_one(answer)
         return str(result.inserted_id)
+
 
     @staticmethod
     async def update_session_score(session_id: str, score: float) -> None:
@@ -180,76 +207,91 @@ class InterviewRepository:
 
     @staticmethod
     async def calculate_analytics(session_id: str) -> Dict[str, Any]:
-        """Calculate analytics for a session."""
+        """
+        Calculate skill dimension analytics for a session.
+
+        Reads per-dimension scores stored in answer documents (communication,
+        technical_depth, confidence, etc.).  Falls back to the old
+        category-based score distribution for legacy answer documents that
+        pre-date the dimension-score storage.
+        """
         db = get_db()
 
-        # Get all answers for session
         answers = await db.interview_answers.find(
             {"session_id": session_id}
         ).to_list(None)
 
-        if not answers:
-            return {
-                "communication": 0,
-                "technical_depth": 0,
-                "confidence": 0,
-                "problem_solving": 0,
-                "leadership": 0,
-                "system_design": 0,
-                "coding": 0,
-                "readiness_score": 0,
-            }
-
-        # Aggregate scores
-        scores = {
-            "communication": [],
-            "technical_depth": [],
-            "confidence": [],
-            "problem_solving": [],
-            "leadership": [],
-            "system_design": [],
-            "coding": [],
+        _zero: Dict[str, Any] = {
+            "communication": 0,
+            "technical_depth": 0,
+            "confidence": 0,
+            "problem_solving": 0,
+            "leadership": 0,
+            "system_design": 0,
+            "coding": 0,
+            "readiness_score": 0,
         }
 
+        if not answers:
+            return _zero
+
+        DIMS = [
+            "communication", "technical_depth", "confidence",
+            "problem_solving", "leadership", "system_design", "coding",
+        ]
+
+        buckets: Dict[str, List[float]] = {d: [] for d in DIMS}
+
         for answer in answers:
-            score = answer.get("score", 0)
-            # Distribute score across metrics based on question type
-            if answer.get("question_id"):
-                # Get question to determine category
-                question = await db.interview_questions.find_one(
-                    {"_id": ObjectId(answer["question_id"])}
-                )
-                if question:
-                    category = question.get("category", "behavioral")
-                    if category == "behavioral":
-                        scores["communication"].append(score)
-                        scores["confidence"].append(score)
-                        scores["leadership"].append(score)
-                    elif category == "technical":
-                        scores["technical_depth"].append(score)
-                        scores["problem_solving"].append(score)
-                    elif category == "system_design":
-                        scores["system_design"].append(score)
-                        scores["problem_solving"].append(score)
-                    elif category == "coding":
-                        scores["coding"].append(score)
-                        scores["problem_solving"].append(score)
+            overall = float(answer.get("overall_score") or answer.get("score") or 0)
 
-        # Calculate averages
-        analytics = {}
-        for metric, values in scores.items():
-            analytics[metric] = (
-                sum(values) / len(values) if values else 0
-            )
+            # Prefer stored dimension fields
+            has_dims = any(answer.get(d) is not None for d in DIMS)
 
-        # Calculate overall readiness
-        all_scores = [s for scores_list in scores.values() for s in scores_list]
-        readiness = (
-            sum(all_scores) / len(all_scores) if all_scores else 0
-        )
+            if has_dims:
+                for dim in DIMS:
+                    val = answer.get(dim)
+                    if val is not None:
+                        buckets[dim].append(float(val))
+            else:
+                # Legacy fallback — distribute overall by question category
+                category = "behavioral"
+                if answer.get("question_id"):
+                    try:
+                        q = await db.interview_questions.find_one(
+                            {"_id": ObjectId(answer["question_id"])}
+                        )
+                        if q:
+                            category = q.get("category", "behavioral")
+                    except Exception:
+                        pass
 
-        analytics["readiness_score"] = readiness
+                if category == "behavioral":
+                    buckets["communication"].append(overall)
+                    buckets["confidence"].append(overall)
+                    buckets["leadership"].append(overall)
+                elif category == "technical":
+                    buckets["technical_depth"].append(overall)
+                    buckets["problem_solving"].append(overall)
+                elif category == "system_design":
+                    buckets["system_design"].append(overall)
+                    buckets["problem_solving"].append(overall)
+                elif category == "coding":
+                    buckets["coding"].append(overall)
+                    buckets["problem_solving"].append(overall)
+                else:
+                    buckets["communication"].append(overall)
+
+        def _avg(lst: List[float]) -> float:
+            return round(sum(lst) / len(lst), 1) if lst else 0
+
+        analytics: Dict[str, Any] = {dim: _avg(buckets[dim]) for dim in DIMS}
+
+        all_vals = [v for lst in buckets.values() for v in lst]
+        analytics["readiness_score"] = _avg(all_vals)
+
         return analytics
+
 
     @staticmethod
     async def save_resume_intelligence(

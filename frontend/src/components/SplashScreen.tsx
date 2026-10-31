@@ -1,14 +1,14 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 function SplashParticles() {
   const points = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
-    const data = new Float32Array(800 * 3);
-    for (let i = 0; i < 800; i += 1) {
-      const t = i / 800;
+    const data = new Float32Array(600 * 3); // reduced from 800
+    for (let i = 0; i < 600; i += 1) {
+      const t = i / 600;
       const angle = t * Math.PI * 18;
       const radius = 0.24 + Math.sin(t * Math.PI * 8) * 0.1;
       data[i * 3] = Math.cos(angle) * radius;
@@ -30,7 +30,7 @@ function SplashParticles() {
   return (
     <points ref={points}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={800} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-position" count={600} array={positions} itemSize={3} />
       </bufferGeometry>
       <pointsMaterial size={0.025} transparent opacity={0.92} color="#00FFD1" blending={THREE.AdditiveBlending} />
     </points>
@@ -39,8 +39,10 @@ function SplashParticles() {
 
 export default function SplashScreen() {
   const reduced = useReducedMotion();
+  // Once animation completes, unmount the entire component (including the WebGL canvas)
+  const [done, setDone] = useState(false);
 
-  if (reduced) return null;
+  if (reduced || done) return null;
 
   return (
     <motion.div
@@ -48,10 +50,11 @@ export default function SplashScreen() {
       initial={{ clipPath: 'circle(150% at 50% 50%)' }}
       animate={{ clipPath: 'circle(0% at 50% 50%)' }}
       transition={{ delay: 2.8, duration: 0.45, ease: [0.87, 0, 0.13, 1] }}
+      onAnimationComplete={() => setDone(true)}
       aria-hidden="true"
     >
       <div className="absolute inset-0">
-        <Canvas camera={{ position: [0, 0, 4], fov: 55 }}>
+        <Canvas camera={{ position: [0, 0, 4], fov: 55 }} dpr={[1, 1]}>
           <SplashParticles />
         </Canvas>
       </div>

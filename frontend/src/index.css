@@ -110,19 +110,19 @@ a {
   inset: 0;
 }
 
-.nexus-grid {
-  opacity: 0.8;
+/* Static perspective grid — replaces the old animated SVG grid with 59 elements.
+   A single CSS element achieves the same retro-grid look with zero runtime cost. */
+.nexus-grid-static {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124, 58, 237, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.07) 1px, transparent 1px);
+  background-size: 50px 32px;
   transform: perspective(760px) rotateX(58deg) translateY(14%);
   transform-origin: center bottom;
-}
-
-.nexus-grid line {
-  stroke: rgba(124, 58, 237, 0.08);
-  stroke-width: 1;
-}
-
-.nexus-grid line:hover {
-  stroke: rgba(245, 158, 11, 0.4);
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 .nexus-noise {
@@ -560,6 +560,7 @@ a {
   padding: 20px;
   backdrop-filter: blur(20px);
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  will-change: transform; /* promote to compositor layer for smooth hover animation */
 }
 
 .module-card:hover {
@@ -1202,6 +1203,12 @@ a {
   box-shadow: 0 0 30px rgba(124, 58, 237, 0.36);
 }
 
+/* will-change hint so the browser promotes these to their own layers before hover */
+.skill-node,
+.prep-mode-chip {
+  will-change: transform;
+}
+
 .tilt-card,
 .project-card {
   display: flex;
@@ -1757,6 +1764,25 @@ a {
 
 @keyframes ringCcw {
   to { transform: rotate(-360deg); }
+}
+
+/* NexusOrb pure-CSS keyframes (replaces Three.js canvas) */
+@keyframes nexus-orb-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes nexus-orb-spin-cw {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nexus-orb-spin-ccw {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes nexus-orb-breathe {
+  0%, 100% { transform: scale(1); box-shadow: inherit; }
+  50% { transform: scale(1.05); }
 }
 
 @media (prefers-reduced-motion: reduce) {

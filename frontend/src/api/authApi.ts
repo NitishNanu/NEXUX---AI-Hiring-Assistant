@@ -1,3 +1,11 @@
+/**
+ * Auth API service.
+ *
+ * All resume uploads go through /auth/resume so they are associated with the
+ * logged-in user's MongoDB profile.  The public /upload_resume endpoint is
+ * kept for anonymous ATS scoring but should NOT be used here.
+ */
+
 import { nexusClient } from './nexusClient';
 import type { AuthUser } from '../store/authStore';
 
@@ -43,7 +51,13 @@ export async function fetchMe(): Promise<AuthUser> {
   return data;
 }
 
-/** Upload resume — saves to MongoDB under the logged-in user. */
+/**
+ * Upload resume and persist it under the logged-in user's profile.
+ *
+ * This intentionally targets /auth/resume (not /upload_resume) so the
+ * resume is linked to the user's MongoDB document and accessible across
+ * all sessions.
+ */
 export async function uploadResumeAuth(file: File) {
   const form = new FormData();
   form.append('file', file);
@@ -51,7 +65,7 @@ export async function uploadResumeAuth(file: File) {
   return data;
 }
 
-/** Fetch the last resume this user uploaded. */
+/** Fetch the last resume this user uploaded from their profile. */
 export async function fetchUserResume(): Promise<{ resume: StoredResume | null }> {
   const { data } = await nexusClient.get<{ resume: StoredResume | null }>('/auth/resume');
   return data;

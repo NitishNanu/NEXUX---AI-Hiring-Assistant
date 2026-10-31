@@ -2,9 +2,17 @@
 
 import os
 import pickle
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    # Imported only for the type checker — not executed at runtime,
+    # so a missing install never causes an ImportError on startup.
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from backend.config import settings
+from backend.logger import get_logger
+
+log = get_logger(__name__)
 
 
 def _get_text_splitter() -> "RecursiveCharacterTextSplitter":
@@ -99,15 +107,16 @@ def _get_llm():
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             api_key=settings.openai_api_key,
-            model="gpt-5.4-2026-03-05",  # Latest GPT model
+            model=settings.openai_model,  # configured in settings (default: gpt-5.4-2026-03-05)
             temperature=0.7,
             max_tokens=2048,
+            request_timeout=60,
         )
     # Priority 2: Google Gemini
     elif settings.use_gemini:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model=settings.gemini_model,  # configured in settings (default: gemini-2.0-flash)
             google_api_key=settings.google_api_key,
             temperature=0.7,
             max_output_tokens=2048,
@@ -119,6 +128,7 @@ def _get_llm():
             "   ALTERNATIVES:\n"
             "     - GOOGLE_API_KEY (free option)"
         )
+
 
 
 def get_text_splitter() -> object:
@@ -137,12 +147,12 @@ def load_vector_store() -> Optional[object]:
             _vector_store = FAISS.load_local(
                 index_path, embeddings, allow_dangerous_deserialization=True
             )
-            print(f"✅ FAISS index loaded from {index_path}")
+            log.info("FAISS index loaded", path=index_path)
             return _vector_store
         except Exception as e:
-            print(f"⚠️ Could not load FAISS index: {e}")
+            log.warning("Could not load FAISS index", error=str(e))
     else:
-        print("ℹ️ No existing FAISS index found. Will create on first ingest.")
+        log.info("No existing FAISS index found — will create on first ingest")
 
     return None
 
@@ -155,7 +165,7 @@ def save_vector_store():
 
     os.makedirs(settings.faiss_index_path, exist_ok=True)
     _vector_store.save_local(settings.faiss_index_path)
-    print(f"💾 FAISS index saved to {settings.faiss_index_path}")
+    log.info("FAISS index saved", path=settings.faiss_index_path)
 
 
 def ingest_texts(texts: list[str], metadatas: list[dict] | None = None):
@@ -181,6 +191,7 @@ def ingest_texts(texts: list[str], metadatas: list[dict] | None = None):
         _vector_store.add_texts(all_chunks, metadatas=all_metas)
 
     save_vector_store()
+    log.info("Texts ingested into FAISS", chunks=len(all_chunks), documents=len(texts))
     return len(all_chunks)
 
 
